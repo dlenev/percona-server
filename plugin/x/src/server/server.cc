@@ -149,6 +149,17 @@ void Server::delayed_start_tasks() {
   });
 }
 
+void Server::reload_ssl_context() {
+  auto sql_context = build_sql_data_context();
+
+  if (sql_context == nullptr) {
+    return;
+  }
+
+  m_ssl_context =
+      xpl::Ssl_context_builder(sql_context.get()).get_result_context();
+}
+
 void Server::start_tasks(xpl::iface::Sql_session *sql_session) {
   // We can't fetch the servers ssl config at plugin-load
   // this method allows to setup it at better time.
