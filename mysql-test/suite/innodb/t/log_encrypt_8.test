@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+=======
+--source include/have_component_keyring_file.inc
+>>>>>>> mysql-8.4.2
 --echo #
 --echo # 35289234 - Can't disable encryption once redo log encryption is enabled
 --echo #
