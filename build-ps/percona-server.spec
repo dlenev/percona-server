@@ -148,7 +148,7 @@ Group:          Applications/Databases
 Version:        %{mysql_version}
 Release:        %{release}
 License:        Copyright (c) 2000, %{build_timestamp}, %{mysql_vendor}. All rights reserved. Under %{?license_type} license as shown in the Description field..
-Source0:        http://www.percona.com/downloads/Percona-Server-8.0/Percona-Server-%{mysql_version}-%{percona_server_version}/source/%{src_dir}.tar.gz
+Source0:        http://downloads.percona.com/downloads/Percona-Server-8.0/Percona-Server-%{mysql_version}-%{percona_server_version}/source/%{src_dir}.tar.gz
 URL:            http://www.percona.com/
 Packager:       Percona MySQL Development Team <mysqldev@percona.com>
 Vendor:         %{percona_server_vendor}
