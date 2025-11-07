@@ -2,6 +2,7 @@
 
 --disable_query_log
 call mtr.add_suppression("innodb_force_recovery is on. We do not allow database modifications by the user. Shut down mysqld and edit my.cnf to set innodb_force_recovery=0");
+call mtr.add_suppression("Failed to compress the gtid_executed table.");
 --enable_query_log
 
 CREATE COMPRESSION_DICTIONARY d1('blah');
