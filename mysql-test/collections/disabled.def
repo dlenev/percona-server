@@ -214,3 +214,8 @@ group_replication.gr_xa_prepare_failure_before_gtid_externalization @windows : B
 group_replication.gr_xa_rollback_failure_before_gtid_externalization @windows : BUG#34155238 Disabled until bug is fixed
 
 rpl_nogtid.rpl_nogtid_rollback_on_anonymous_gtid : Bug#37582501 Replication tests break MTA asserts with user viable scenarios
+
+# Temporary disabled due to Upstream issues
+main.sp-library-binary : BUG#0 PS-10183
+rpl.rpl_seconds_behind_master : BUG#0 PS-10183
+binlog_gtid.binlog_gtid_binlog_recovery_errors : BUG#0 PS-10183
