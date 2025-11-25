@@ -219,3 +219,6 @@ rpl_nogtid.rpl_nogtid_rollback_on_anonymous_gtid : Bug#37582501 Replication test
 main.sp-library-binary : BUG#0 PS-10183
 rpl.rpl_seconds_behind_master : BUG#0 PS-10183
 binlog_gtid.binlog_gtid_binlog_recovery_errors : BUG#0 PS-10183
+
+# Temporarily disabled due to known PS issues
+percona.coredump : BUG#0 PS- PS-10330 - Fix percona.coredump test failures on ARM64
