@@ -222,3 +222,8 @@ binlog_gtid.binlog_gtid_binlog_recovery_errors : BUG#0 PS-10183
 
 # Temporarily disabled due to known PS issues
 percona.coredump : BUG#0 PS- PS-10330 - Fix percona.coredump test failures on ARM64
+
+# Temporarily disabled router tests which have problems with mysqlrouter
+# shutdown (they are also present in Upstream, but are not reported there).
+router.metadata_gtid : BUG#0 PS-10183
+router.metadata_cluster_basic : BUG#0 PS-10183
