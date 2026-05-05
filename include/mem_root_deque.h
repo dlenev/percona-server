@@ -35,19 +35,19 @@
 
 template <class Element_type>
 static constexpr size_t FindElementsPerBlock() {
-  // Aim for 1 kB.
+  // 256 bytes is an expirement
   size_t base_number_elems =
-      1024 / sizeof(Element_type);  // NOLINT(bugprone-sizeof-expression)
+      256 / sizeof(Element_type);  // NOLINT(bugprone-sizeof-expression)
 
   // Find the next power of two, rounded up. We should have at least 16 elements
   // per block to avoid allocating way too often (although the code itself
   // should work fine with 1, for debugging purposes).
-  for (size_t block_size = 16; block_size < 1024; ++block_size) {
+  for (size_t block_size = 16; block_size < 256; ++block_size) {
     if (block_size >= base_number_elems) {
       return block_size;
     }
   }
-  return 1024;
+  return 256;
 }
 
 /**
