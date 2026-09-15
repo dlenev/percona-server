@@ -757,6 +757,11 @@ TEST_F(HnswTest, AdjacentPruneShortListZeroFillsTail) {
     }
   }
   EXPECT_TRUE(found_new);
+
+#ifndef NDEBUG
+  // Graph may retain DUMMY/LOST stubs from failed lazy loads.
+  EXPECT_TRUE(cold.validate());
+#endif
 }
 
 #ifndef NDEBUG

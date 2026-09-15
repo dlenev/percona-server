@@ -938,9 +938,12 @@ class HNSW {
   /**
     Check internal graph consistency (debug builds only).
 
-    Requires every node in m_nodes to be fully loaded/completed.
-    Must not be called until all nodes that will be checked
-    have been loaded/completed.
+    Intended for a quiescent index (no concurrent insert/search): NODE_NEW
+    and NODE_LINKING must not be present. NODE_DUMMY and NODE_LOST stubs are
+    allowed in m_nodes and as neighbor pointers of COMPLETE nodes; their
+    layer / neighbor storage is not inspected. Neighbor-list invariants are
+    checked only for NODE_COMPLETE nodes. Entry point must be COMPLETE and
+    on the highest COMPLETE layer.
 
     @note This API is not thread-safe. It is intended for
           use in unit tests and debug builds only.
@@ -950,8 +953,9 @@ class HNSW {
     if (m_nodes.empty()) {
       return m_entry_point.load() == nullptr;
     }
-    // Non-empty index must have an entry point.
-    if (m_entry_point.load() == nullptr) {
+    // Non-empty index must have a COMPLETE entry point.
+    Node *const entry_point = m_entry_point.load();
+    if (entry_point == nullptr || entry_point->state() != NODE_COMPLETE) {
       return false;
     }
 
@@ -963,18 +967,35 @@ class HNSW {
       if (node == nullptr || node->id() != kv.first) {
         return false;
       }
+      const NodeState state = node->state();
+      // Quiescent index: no in-flight inserts.
+      if (state == NODE_NEW || state == NODE_LINKING) {
+        return false;
+      }
+      // Lazy-load stubs: id is known, but layer/neighbors are not valid.
+      // They may remain in m_nodes and as edges from COMPLETE nodes.
+      if (state == NODE_DUMMY || state == NODE_LOST) {
+        continue;
+      }
+      if (state != NODE_COMPLETE) {
+        return false;
+      }
       max_layer = std::max(max_layer, node->layer());
-      if (node == m_entry_point.load()) {
+      if (node == entry_point) {
         found_ep = true;
       }
     }
-    // Entry point must be in the map and sit on the highest layer.
-    if (!found_ep || m_entry_point.load()->layer() != max_layer) {
+    // Entry point must be in the map and sit on the highest COMPLETE layer.
+    if (!found_ep || entry_point->layer() != max_layer) {
       return false;
     }
 
     for (const auto &kv : m_nodes) {
       const Node *node = kv.second;
+      // Only COMPLETE nodes have inspectable neighbor lists.
+      if (node->state() != NODE_COMPLETE) {
+        continue;
+      }
       for (uint8_t lc = 0; lc <= node->layer(); ++lc) {
         const size_t Mmax = get_Mmax(lc);
         Node *const *begin = node->neighbors_begin(*this, lc);
@@ -1011,8 +1032,18 @@ class HNSW {
           if (nit == m_nodes.end() || nit->second != nb) {
             return false;
           }
-          // Neighbor must exist on this layer (its top layer >= lc).
-          if (nb->layer() < lc) {
+          const NodeState nb_state = nb->state();
+          // Insert-owned states must not appear on edges after quiescence.
+          if (nb_state == NODE_NEW || nb_state == NODE_LINKING) {
+            return false;
+          }
+          // COMPLETE neighbors must exist on this layer (top layer >= lc).
+          // DUMMY/LOST stubs are allowed as edges; do not call layer() on them.
+          if (nb_state == NODE_COMPLETE) {
+            if (nb->layer() < lc) {
+              return false;
+            }
+          } else if (nb_state != NODE_DUMMY && nb_state != NODE_LOST) {
             return false;
           }
           ++degree;
