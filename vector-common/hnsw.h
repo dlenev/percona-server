@@ -291,9 +291,9 @@ class HNSW {
       std::scoped_lock lock(m_entry_point_lock);
       entry_point = m_entry_point.load();
       if (entry_point == nullptr) {
-        new_node->set_complete();
         m_persistor.insert_cb(persistor_ctx, id, base_pk, q, target_layer,
                               neighbor_ids(new_node));
+        new_node->set_complete();
         m_persistor.update_entry_point_cb(persistor_ctx, id);
         m_entry_point.store(new_node);
         return;
@@ -400,7 +400,8 @@ class HNSW {
           const size_t selected =
               select_neighbors(neighbor->vec(), candidate_neighbors, Mmax,
                                scratch_buffer.data());
-          assert(selected <= Mmax);
+
+          assert(selected == std::min(Mmax, candidate_neighbors.size()));
 
           // If some candidates were skipped as LOST / failed lazy load,
           // select_neighbors may return fewer than Mmax; clear the tail so
@@ -572,6 +573,7 @@ class HNSW {
       m_query_vec = nullptr;
       m_batch_size = 0;
       m_ef_search = 0;
+      m_persistor_ctx = nullptr;
 
       m_visited = std::unordered_set<Node *>();
       m_discarded = {};
