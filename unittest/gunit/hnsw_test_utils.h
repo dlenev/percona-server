@@ -30,6 +30,7 @@
 #include <cmath>
 #include <cstdint>
 #include <initializer_list>
+#include <map>
 #include <mutex>
 #include <random>
 #include <unordered_map>
@@ -303,7 +304,12 @@ inline size_t stored_layer0_end(uint8_t layer, size_t M) {
 */
 inline uint64_t find_full_layer0_hub(const RecordingPersistor::Context &store,
                                      size_t M) {
-  for (const auto &kv : store.nodes) {
+  // Order the nodes by id to ensure that the result does not depend on
+  // the unordered_map implementation.
+  std::map<uint64_t, StoredNode> ordered_nodes(store.nodes.begin(),
+                                               store.nodes.end());
+
+  for (const auto &kv : ordered_nodes) {
     const StoredNode &row = kv.second;
     const size_t begin = stored_layer0_begin(row.layer, M);
     const size_t end = stored_layer0_end(row.layer, M);
