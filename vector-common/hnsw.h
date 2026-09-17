@@ -475,6 +475,7 @@ class HNSW {
                 // we mark the node as lost. This prevents it from being
                 // used by search and ensures that references to it are
                 // eventually removed from the graph.
+                new_node->set_lost();
                 return load_rc;
               }
               assert(nb->state() == NODE_COMPLETE);
