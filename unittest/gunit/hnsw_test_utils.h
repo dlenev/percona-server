@@ -83,14 +83,15 @@ struct NullPersistor {
   }
 };
 
-using TestHnsw = HNSW<ArenaAllocator, NullPersistor>;
+/** Pin mt19937 so layer assignment matches across libstdc++/libc++. */
+using TestHnsw = HNSW<ArenaAllocator, NullPersistor, std::mt19937>;
 
 /**
   Thread-safe UniformRandomBitGenerator for concurrent insert() tests.
 
   HNSW does not synchronize RandomEngine access; concurrent inserts require
   an engine that is safe to call from multiple threads. Constructible from
-  uint32_t like std::default_random_engine / std::mt19937.
+  uint32_t like std::mt19937.
 */
 class MutexRandomEngine {
  public:
@@ -262,7 +263,7 @@ struct RecordingPersistor {
   }
 };
 
-using LoadTestHnsw = HNSW<ArenaAllocator, RecordingPersistor>;
+using LoadTestHnsw = HNSW<ArenaAllocator, RecordingPersistor, std::mt19937>;
 
 using ConcurrentLoadHnsw =
     HNSW<ArenaAllocator, RecordingPersistor, MutexRandomEngine>;
@@ -400,8 +401,9 @@ class BorrowedArenaAllocator {
   ArenaStats *m_arena;
 };
 
-using BorrowedHnsw = HNSW<BorrowedArenaAllocator, NullPersistor>;
-using BorrowedLoadHnsw = HNSW<BorrowedArenaAllocator, RecordingPersistor>;
+using BorrowedHnsw = HNSW<BorrowedArenaAllocator, NullPersistor, std::mt19937>;
+using BorrowedLoadHnsw =
+    HNSW<BorrowedArenaAllocator, RecordingPersistor, std::mt19937>;
 
 /** Scoped arm of g_pending_arena; construct the index inside its scope. */
 class ArenaHandover {
@@ -504,18 +506,23 @@ inline std::vector<std::vector<float>> make_clustered_points(
 }
 
 /**
-  Run a streaming search to completion (or @p max_results rows) and return the
-  SearchHit values in the order the stream yielded them.
+  Run a streaming search to completion (or @p max_results rows).
+
+  @return {.first = HNSW_SUCCESS, .second = hits in stream order} on normal
+          completion (including an empty index). On nn_search_start() /
+          nn_search_next() failure, .first is that HnswResult and .second is
+          empty.
 */
 template <typename Hnsw>
-inline std::vector<typename Hnsw::SearchHit> drain_stream(
-    Hnsw &index, const char *query, size_t batch_size, size_t ef_search,
-    size_t max_results = 1000,
-    typename Hnsw::PersistorContext *persistor_ctx = nullptr) {
+inline std::pair<HnswResult, std::vector<typename Hnsw::SearchHit>>
+drain_stream(Hnsw &index, const char *query, size_t batch_size,
+             size_t ef_search, size_t max_results = 1000,
+             typename Hnsw::PersistorContext *persistor_ctx = nullptr) {
   typename Hnsw::NNSearchContext ctx;
-  if (index.nn_search_start(&ctx, query, batch_size, ef_search,
-                            persistor_ctx) != HNSW_SUCCESS) {
-    return {};
+  const HnswResult start_rc =
+      index.nn_search_start(&ctx, query, batch_size, ef_search, persistor_ctx);
+  if (start_rc != HNSW_SUCCESS) {
+    return {start_rc, {}};
   }
   std::vector<typename Hnsw::SearchHit> out;
   for (size_t i = 0; i < max_results; ++i) {
@@ -524,11 +531,11 @@ inline std::vector<typename Hnsw::SearchHit> drain_stream(
       break;
     }
     if (rc != HNSW_SUCCESS) {
-      return {};
+      return {rc, {}};
     }
     out.push_back(hit);
   }
-  return out;
+  return {HNSW_SUCCESS, std::move(out)};
 }
 
 /** Extract base_pk values from a SearchHit list (for recall helpers). */

@@ -1700,13 +1700,25 @@ class HNSW {
   /**
     Search / insert entry point (HNSW paper).
 
-    Invariants:
-      - nullptr iff the index is empty (m_nodes.empty()).
-      - When non-null: present in m_nodes, fully loaded, and sits on the
-        highest layer present in the graph (its m_layer equals the global
-        max). Nodes inserted later on that same layer do not replace it.
-    Updated on first insert and when a new node is assigned a layer higher
-    than the current max.
+    Healthy-graph invariants (after successful insert / a usable cold start):
+      - nullptr if m_nodes.empty().
+      - When non-null: present in m_nodes, NODE_COMPLETE, and sits on the
+        highest COMPLETE layer (its m_layer equals that max). Nodes inserted
+        later on that same layer do not replace it.
+
+    Documented post-failure states (validate(possibly_failed_cbs=true)):
+      - Non-empty m_nodes with a null entry point: first-node insert_cb or
+        update_entry_point_cb failed (node is NODE_FAILED), or
+        init_from_entry_point() failed after emplace (stub stays DUMMY/LOST).
+      - Non-null entry point below the highest COMPLETE layer: a later insert
+        became COMPLETE (insert_cb succeeded) but update_entry_point_cb failed
+        when raising EP, or insert returned earlier from update_neighbors_cb
+        failure before the EP-raise block. The taller node stays reachable
+        through lower layers; insert/search still derive max_layer from the
+        published entry point.
+
+    Updated on the first successful insert and when a new node's layer is higher
+    than the current published entry point and update_entry_point_cb succeeds.
 
     @note This is an atomic pointer which is also protected by
           m_entry_point_lock. Readers can safely read the pointer
